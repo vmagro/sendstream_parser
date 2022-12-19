@@ -1,7 +1,11 @@
 [package]
-name = "sendstream_parser"
-version = "0.1.0"
+description = "Parser for BTRFS sendstreams"
 edition = "2021"
+keywords = ["btrfs", "sendstream"]
+license = "MIT"
+name = "sendstream_parser"
+repository = "https://github.com/vmagro/sendstream_parser/"
+version = "0.1.0"
 
 [dependencies]
 hex = "0.4"
