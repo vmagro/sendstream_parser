@@ -1,0 +1,391 @@
+use nom::IResult;
+
+use crate::wire::tlv::attr_types;
+use crate::wire::tlv::parse_tlv;
+use crate::wire::tlv::parse_tlv_with_attr;
+use crate::wire::tlv::RawTlv;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Command<'a> {
+    pub(crate) hdr: CommandHeader,
+    pub(crate) tlvs: Vec<RawTlv<'a>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CommandHeader {
+    /// Command size, excluing command header itself
+    pub(crate) len: usize,
+    /// Command type, Check btrfs_send_command in kernel send.h for all types
+    pub(crate) ty: CommandType,
+    /// CRC32 checksum, including the header, with checksum filled with 0.
+    pub(crate) crc32: u32,
+}
+
+impl CommandHeader {
+    pub(crate) fn parse(input: &[u8]) -> IResult<&[u8], Self> {
+        let (input, len) = nom::number::complete::le_u32(input)?;
+        let (input, ty) = CommandType::parse(input)?;
+        let (input, crc32) = nom::number::complete::le_u32(input)?;
+        Ok((
+            input,
+            Self {
+                len: len as usize,
+                ty,
+                crc32,
+            },
+        ))
+    }
+}
+
+macro_rules! command_type {
+    ($enm: ident, $($v:ident),+) => {
+        /// All of the btrfs sendstream commands. Copied from linux/fs/btrfs/send.h
+        /// WARNING: order is important!
+        #[derive(
+            Debug,
+            Copy,
+            Clone,
+            PartialEq,
+            Eq,
+            PartialOrd,
+            Ord,
+        )]
+        pub(crate) enum $enm {
+            $($v,)+
+            /// Unknown command, maybe it's new?
+            Unknown(u16),
+        }
+
+        impl $enm {
+            const fn as_u16(self) -> u16 {
+                match self {
+                    $(Self::$v => ${index()},)+
+                    Self::Unknown(u) => u,
+                }
+            }
+
+            const fn from_u16(u: u16) -> Self {
+                match u {
+                    $(${index()} => Self::$v,)+
+                    _ => Self::Unknown(u),
+                }
+            }
+
+            pub(crate) fn iter() -> impl Iterator<Item = Self> {
+                [$(Self::$v,)+].into_iter()
+            }
+        }
+    }
+}
+
+command_type!(
+    CommandType,
+    // variants below
+    Unspecified,
+    Subvol,
+    Snapshot,
+    Mkfile,
+    Mkdir,
+    Mknod,
+    Mkfifo,
+    Mksock,
+    Symlink,
+    Rename,
+    Link,
+    Unlink,
+    Rmdir,
+    SetXattr,
+    RemoveXattr,
+    Write,
+    Clone,
+    Truncate,
+    Chmod,
+    Chown,
+    Utimes,
+    End,
+    UpdateExtent
+);
+
+impl CommandType {
+    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
+        let (input, ty) = nom::number::complete::le_u16(input)?;
+        Ok((input, Self::from_u16(ty)))
+    }
+}
+
+impl<'a> Command<'a> {
+    pub(crate) fn parse(hdr: CommandHeader, input: &'a [u8]) -> IResult<&'a [u8], Self> {
+        let (input, tlvs) = nom::multi::many0(RawTlv::parse)(input)?;
+        Ok((input, Self { hdr, tlvs }))
+    }
+}
+
+macro_rules! parse_subtypes {
+    ($hdr: expr, $cmd_data:expr, $($t:ident),+) => {
+        match $hdr.ty {
+            $(CommandType::$t => {
+                let (remaining, cmd) = crate::$t::parse($cmd_data).expect(concat!("failed to parse ", stringify!($t)));
+                (remaining, cmd.into())
+            }),+
+            CommandType::End => ($cmd_data, crate::Command::End),
+            // TODO: all wire types should be covered
+            _ => {
+                let (remaining, cmd) = Command::parse($hdr, $cmd_data)?;
+                (remaining, crate::Command::Wire(cmd))
+            }
+        }
+    }
+}
+
+impl<'a> crate::Command<'a> {
+    pub(crate) fn parse(input: &'a [u8]) -> IResult<&'a [u8], Self> {
+        let (input, hdr) = CommandHeader::parse(input)?;
+        let (input, cmd_data) = nom::bytes::complete::take(hdr.len)(input)?;
+        let (cmd_remaining, cmd): (_, crate::Command) = parse_subtypes!(
+            hdr,
+            cmd_data,
+            Subvol,
+            Chmod,
+            Chown,
+            Clone,
+            Link,
+            Mkdir,
+            Mkfifo,
+            Mkfile,
+            Mknod,
+            Mksock,
+            RemoveXattr,
+            Rename,
+            Rmdir,
+            SetXattr,
+            Snapshot,
+            Symlink,
+            Truncate,
+            Unlink,
+            Utimes,
+            Write
+        );
+
+        assert!(cmd_remaining.is_empty(), "command length is wrong",);
+        Ok((input, cmd))
+    }
+}
+
+impl<'a> crate::Subvol<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, uuid) = parse_tlv(input)?;
+        let (input, ctransid) = parse_tlv(input)?;
+        Ok((
+            input,
+            Self {
+                path,
+                uuid,
+                ctransid,
+            },
+        ))
+    }
+}
+
+impl<'a> crate::Chmod<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, mode) = parse_tlv(input)?;
+        Ok((input, Self { path, mode }))
+    }
+}
+
+impl<'a> crate::Chown<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, uid) = parse_tlv(input)?;
+        let (input, gid) = parse_tlv(input)?;
+        Ok((input, Self { path, uid, gid }))
+    }
+}
+
+impl<'a> crate::Clone<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, src_offset) = parse_tlv(input)?;
+        let (input, len) = parse_tlv(input)?;
+        let (input, src_path) = parse_tlv(input)?;
+        let (input, uuid) = parse_tlv_with_attr::<_, 16, attr_types::CloneUuid>(input)?;
+        let (input, ctransid) = parse_tlv_with_attr::<_, 8, attr_types::CloneCtransid>(input)?;
+        let (input, dst_path) = parse_tlv_with_attr::<_, 0, attr_types::ClonePath>(input)?;
+        let (input, dst_offset) = parse_tlv_with_attr::<_, 8, attr_types::CloneOffset>(input)?;
+        Ok((
+            input,
+            Self {
+                src_offset,
+                len,
+                src_path,
+                uuid,
+                ctransid,
+                dst_path,
+                dst_offset,
+            },
+        ))
+    }
+}
+
+impl<'a> crate::Link<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, link_name) = parse_tlv(input)?;
+        let (input, target) = parse_tlv(input)?;
+        Ok((input, Self { target, link_name }))
+    }
+}
+
+impl<'a> crate::Symlink<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, link_name) = parse_tlv(input)?;
+        let (input, ino) = parse_tlv(input)?;
+        let (input, target) = parse_tlv(input)?;
+        Ok((
+            input,
+            Self {
+                target,
+                ino,
+                link_name,
+            },
+        ))
+    }
+}
+
+impl<'a> crate::Mkdir<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, ino) = parse_tlv(input)?;
+        Ok((input, Self { path, ino }))
+    }
+}
+
+impl<'a> crate::Mkfile<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, ino) = parse_tlv(input)?;
+        Ok((input, Self { path, ino }))
+    }
+}
+
+// These all have the same fields, so parse them with a macro
+macro_rules! mknod {
+    ($i:ident) => {
+        impl<'a> crate::$i<'a> {
+            fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+                let (input, path) = parse_tlv(input)?;
+                let (input, ino) = parse_tlv(input)?;
+                let (input, rdev) = parse_tlv(input)?;
+                let (input, mode) = parse_tlv(input)?;
+                Ok((
+                    input,
+                    Self {
+                        path,
+                        ino,
+                        rdev,
+                        mode,
+                    },
+                ))
+            }
+        }
+    };
+}
+
+mknod!(Mknod);
+mknod!(Mkfifo);
+mknod!(Mksock);
+
+impl<'a> crate::RemoveXattr<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, name) = parse_tlv(input)?;
+        Ok((input, Self { path, name }))
+    }
+}
+
+impl<'a> crate::Rename<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, from) = parse_tlv(input)?;
+        let (input, to) = parse_tlv_with_attr::<_, 0, attr_types::PathTo>(input)?;
+        Ok((input, Self { from, to }))
+    }
+}
+
+impl<'a> crate::Rmdir<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        Ok((input, Self { path }))
+    }
+}
+
+impl<'a> crate::SetXattr<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, name) = parse_tlv(input)?;
+        let (input, data) = parse_tlv(input)?;
+        Ok((input, Self { path, name, data }))
+    }
+}
+
+impl<'a> crate::Truncate<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, size) = parse_tlv(input)?;
+        Ok((input, Self { path, size }))
+    }
+}
+
+impl<'a> crate::Snapshot<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, uuid) = parse_tlv(input)?;
+        let (input, ctransid) = parse_tlv(input)?;
+        let (input, clone_uuid) = parse_tlv_with_attr::<_, 16, attr_types::CloneUuid>(input)?;
+        let (input, clone_ctransid) =
+            parse_tlv_with_attr::<_, 8, attr_types::CloneCtransid>(input)?;
+        Ok((
+            input,
+            Self {
+                path,
+                uuid,
+                ctransid,
+                clone_uuid,
+                clone_ctransid,
+            },
+        ))
+    }
+}
+
+impl<'a> crate::Unlink<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        Ok((input, Self { path }))
+    }
+}
+
+impl<'a> crate::Utimes<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, atime) = parse_tlv(input)?;
+        let (input, mtime) = parse_tlv(input)?;
+        let (input, ctime) = parse_tlv(input)?;
+        Ok((
+            input,
+            Self {
+                path,
+                atime,
+                mtime,
+                ctime,
+            },
+        ))
+    }
+}
+
+impl<'a> crate::Write<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, offset) = parse_tlv(input)?;
+        let (input, data) = parse_tlv(input)?;
+        Ok((input, Self { path, offset, data }))
+    }
+}

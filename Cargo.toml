@@ -1,0 +1,11 @@
+[package]
+name = "sendstream_parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hex = "0.4"
+nix = "0.26"
+nom = "7"
+thiserror = "1"
+uuid = "1"
