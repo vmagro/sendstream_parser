@@ -128,10 +128,8 @@ macro_rules! parse_subtypes {
                 (remaining, cmd.into())
             }),+
             CommandType::End => ($cmd_data, crate::Command::End),
-            // TODO: all wire types should be covered
             _ => {
-                let (remaining, cmd) = Command::parse($hdr, $cmd_data)?;
-                (remaining, crate::Command::Wire(cmd))
+                unreachable!("all btrfs sendstream command types are covered, what is this? {:?}", $hdr)
             }
         }
     }
@@ -162,6 +160,7 @@ impl<'a> crate::Command<'a> {
             Symlink,
             Truncate,
             Unlink,
+            UpdateExtent,
             Utimes,
             Write
         );
@@ -360,6 +359,15 @@ impl<'a> crate::Unlink<'a> {
     fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
         let (input, path) = parse_tlv(input)?;
         Ok((input, Self { path }))
+    }
+}
+
+impl<'a> crate::UpdateExtent<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, offset) = parse_tlv(input)?;
+        let (input, len) = parse_tlv(input)?;
+        Ok((input, Self { path, offset, len }))
     }
 }
 

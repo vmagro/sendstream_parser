@@ -37,10 +37,9 @@ pub enum Command<'a> {
     Symlink(Symlink<'a>),
     Truncate(Truncate<'a>),
     Unlink(Unlink<'a>),
+    UpdateExtent(UpdateExtent<'a>),
     Utimes(Utimes<'a>),
     Write(Write<'a>),
-    // TODO: all variants should be covered
-    Wire(wire::Command<'a>),
 }
 
 impl<'a> Command<'a> {
@@ -68,9 +67,9 @@ impl<'a> Command<'a> {
             Self::Symlink(_) => wire::cmd::CommandType::Symlink,
             Self::Truncate(_) => wire::cmd::CommandType::Truncate,
             Self::Unlink(_) => wire::cmd::CommandType::Unlink,
+            Self::UpdateExtent(_) => wire::cmd::CommandType::UpdateExtent,
             Self::Utimes(_) => wire::cmd::CommandType::Utimes,
             Self::Write(_) => wire::cmd::CommandType::Write,
-            Self::Wire(w) => w.hdr.ty,
         }
     }
 }
@@ -251,6 +250,14 @@ pub struct Unlink<'a> {
     pub(crate) path: Cow<'a, Path>,
 }
 from_cmd!(Unlink);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateExtent<'a> {
+    pub(crate) path: Cow<'a, Path>,
+    pub(crate) offset: FileOffset,
+    pub(crate) len: usize,
+}
+from_cmd!(UpdateExtent);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]

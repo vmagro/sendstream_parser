@@ -17,10 +17,6 @@ impl<'a> Sendstream<'a> {
         let (input, version) = nom::number::complete::le_u32(input)?;
         assert_eq!(1, version);
         let (input, commands) = nom::multi::many1(crate::Command::parse)(input)?;
-        // for cmd in &cmds {
-        //     println!("{:?}", cmd);
-        // }
-        // todo!("left = {:?}", input)
         Ok((input, Self { commands }))
     }
 }
@@ -42,13 +38,16 @@ mod tests {
             }
         }
         assert!(left.is_empty(), "there should not be any trailing data");
-        panic!("lol");
+        panic!("making the output readable above");
     }
 
     #[test]
     fn sendstream_covers_all_commands() {
         let all_cmds: BTreeSet<_> = cmd::CommandType::iter()
             .filter(|c| *c != cmd::CommandType::Unspecified)
+            // update_extent is used for no-file-data sendstreams (`btrfs send
+            // --no-data`), so it's not super useful to cover here
+            .filter(|c| *c != cmd::CommandType::UpdateExtent)
             .collect();
         let (left, sendstreams) =
             nom::multi::many1(Sendstream::parse)(include_bytes!("../../demo.sendstream"))
@@ -58,6 +57,7 @@ mod tests {
             .iter()
             .flat_map(|s| s.commands.iter().map(|c| c.command_type()))
             .collect();
+
         if all_cmds != seen_cmds {
             let missing: BTreeSet<_> = all_cmds.difference(&seen_cmds).collect();
             panic!("sendstream did not include some commands: {:?}", missing,);
