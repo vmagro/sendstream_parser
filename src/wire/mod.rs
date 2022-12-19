@@ -6,10 +6,9 @@ static MAGIC_HEADER: &[u8] = b"btrfs-stream\0";
 
 pub(crate) mod cmd;
 mod tlv;
+use crate::Error;
+use crate::Result;
 pub use cmd::Command;
-
-#[derive(Debug, thiserror::Error)]
-enum Error {}
 
 impl<'a> Sendstream<'a> {
     fn parse(input: &'a [u8]) -> IResult<&'a [u8], Self> {
@@ -18,6 +17,16 @@ impl<'a> Sendstream<'a> {
         assert_eq!(1, version);
         let (input, commands) = nom::multi::many1(crate::Command::parse)(input)?;
         Ok((input, Self { commands }))
+    }
+
+    pub fn parse_all(input: &'a [u8]) -> Result<'a, Vec<Self>> {
+        let (left, sendstreams) =
+            nom::combinator::complete(nom::multi::many1(Sendstream::parse))(input).expect("todo");
+        if !left.is_empty() {
+            Err(Error::TrailingData(left))
+        } else {
+            Ok(sendstreams)
+        }
     }
 }
 
@@ -29,15 +38,13 @@ mod tests {
 
     #[test]
     fn parse_demo() {
-        let (left, sendstreams) =
-            nom::multi::many1(Sendstream::parse)(include_bytes!("../../demo.sendstream"))
-                .expect("failed to parse gold.sendstream");
+        let sendstreams = Sendstream::parse_all(include_bytes!("../../demo.sendstream"))
+            .expect("failed to parse gold.sendstream");
         for (i, stream) in sendstreams.iter().enumerate() {
             for command in &stream.commands {
                 println!("s{i} {command:?}");
             }
         }
-        assert!(left.is_empty(), "there should not be any trailing data");
         panic!("making the output readable above");
     }
 
@@ -49,10 +56,8 @@ mod tests {
             // --no-data`), so it's not super useful to cover here
             .filter(|c| *c != cmd::CommandType::UpdateExtent)
             .collect();
-        let (left, sendstreams) =
-            nom::multi::many1(Sendstream::parse)(include_bytes!("../../demo.sendstream"))
-                .expect("failed to parse gold.sendstream");
-        assert!(left.is_empty(), "there should not be any trailing data");
+        let sendstreams = Sendstream::parse_all(include_bytes!("../../demo.sendstream"))
+            .expect("failed to parse gold.sendstream");
         let seen_cmds = sendstreams
             .iter()
             .flat_map(|s| s.commands.iter().map(|c| c.command_type()))

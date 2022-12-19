@@ -11,9 +11,26 @@ use uuid::Uuid;
 
 mod wire;
 
+#[derive(Debug, thiserror::Error)]
+pub enum Error<'a> {
+    // TODO(vmagro): expose more granular errors at some point?
+    // #[error("parse error: {0:?}")]
+    // Parse(nom::error::ErrorKind),
+    #[error("unexpected trailing data: {0:?}")]
+    TrailingData(&'a [u8]),
+}
+
+pub type Result<'a, R> = std::result::Result<R, Error<'a>>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Sendstream<'a> {
     commands: Vec<Command<'a>>,
+}
+
+impl<'a> Sendstream<'a> {
+    pub fn commands(&self) -> &[Command<'a>] {
+        &self.commands
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
