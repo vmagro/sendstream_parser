@@ -8,7 +8,6 @@ pub(crate) mod cmd;
 mod tlv;
 use crate::Error;
 use crate::Result;
-pub use cmd::Command;
 
 impl<'a> Sendstream<'a> {
     fn parse(input: &'a [u8]) -> IResult<&'a [u8], Self> {

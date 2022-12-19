@@ -3,13 +3,6 @@ use nom::IResult;
 use crate::wire::tlv::attr_types;
 use crate::wire::tlv::parse_tlv;
 use crate::wire::tlv::parse_tlv_with_attr;
-use crate::wire::tlv::RawTlv;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Command<'a> {
-    pub(crate) hdr: CommandHeader,
-    pub(crate) tlvs: Vec<RawTlv<'a>>,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CommandHeader {
@@ -57,6 +50,7 @@ macro_rules! command_type {
         }
 
         impl $enm {
+            #[cfg(test)]
             const fn as_u16(self) -> u16 {
                 match self {
                     $(Self::$v => ${index()},)+
@@ -71,6 +65,7 @@ macro_rules! command_type {
                 }
             }
 
+            #[cfg(test)]
             pub(crate) fn iter() -> impl Iterator<Item = Self> {
                 [$(Self::$v,)+].into_iter()
             }
@@ -110,13 +105,6 @@ impl CommandType {
     fn parse(input: &[u8]) -> IResult<&[u8], Self> {
         let (input, ty) = nom::number::complete::le_u16(input)?;
         Ok((input, Self::from_u16(ty)))
-    }
-}
-
-impl<'a> Command<'a> {
-    pub(crate) fn parse(hdr: CommandHeader, input: &'a [u8]) -> IResult<&'a [u8], Self> {
-        let (input, tlvs) = nom::multi::many0(RawTlv::parse)(input)?;
-        Ok((input, Self { hdr, tlvs }))
     }
 }
 

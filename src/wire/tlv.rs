@@ -256,22 +256,12 @@ macro_rules! gen_attrs_code {
         )]
         pub(crate) enum $enm {
             $($v,)+
-            /// Unknown attribute, maybe it's new?
-            Unknown(u16),
         }
 
         impl $enm {
             const fn as_u16(self) -> u16 {
                 match self {
                     $(Self::$v => ${index()},)+
-                    Self::Unknown(u) => u,
-                }
-            }
-
-            const fn from_u16(u: u16) -> Self {
-                match u {
-                    $(${index()} => Self::$v,)+
-                    _ => Self::Unknown(u),
                 }
             }
         }
@@ -323,33 +313,5 @@ gen_attrs_code!(
 impl Attr {
     fn tag(self) -> [u8; 2] {
         self.as_u16().to_le_bytes()
-    }
-
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (input, a) = nom::number::complete::le_u16(input)?;
-        Ok((input, Self::from_u16(a)))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RawTlv<'i> {
-    ty: Attr,
-    len: usize,
-    data: &'i [u8],
-}
-
-impl<'i> RawTlv<'i> {
-    pub(crate) fn parse(input: &'i [u8]) -> IResult<&'i [u8], Self> {
-        let (input, ty) = Attr::parse(input)?;
-        let (input, len) = nom::number::complete::le_u16(input)?;
-        let (input, data) = nom::bytes::complete::take(len)(input)?;
-        Ok((
-            input,
-            Self {
-                ty,
-                len: len.into(),
-                data,
-            },
-        ))
     }
 }

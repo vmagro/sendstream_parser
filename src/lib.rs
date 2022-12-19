@@ -330,7 +330,7 @@ impl<'a> std::fmt::Debug for Data<'a> {
             Err(_) => Cow::Owned(hex::encode(&self.0)),
         };
         if s.len() <= 128 {
-            write!(f, "{:?}", s)
+            write!(f, "{s:?}")
         } else {
             write!(f, "{:?} <truncated> {:?}", &s[..64], &s[s.len() - 64..])
         }
