@@ -8,6 +8,7 @@ repository = "https://github.com/vmagro/sendstream_parser/"
 version = "0.1.0"
 
 [dependencies]
+getset = "0.1"
 hex = "0.4"
 nix = "0.26"
 nom = "7"

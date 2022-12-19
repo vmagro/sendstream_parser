@@ -4,6 +4,8 @@ use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::path::Path;
 
+use getset::CopyGetters;
+use getset::Getters;
 use nix::sys::stat::Mode;
 use nix::unistd::Gid;
 use nix::unistd::Uid;
@@ -106,30 +108,44 @@ macro_rules! from_cmd {
 /// it will end up with an opaque name that will end up getting renamed to the
 /// final name later in the stream.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TemporaryPath<'a>(pub Cow<'a, Path>);
+pub struct TemporaryPath<'a>(pub(crate) Cow<'a, Path>);
+
+impl<'a> TemporaryPath<'a> {
+    pub fn path(&self) -> &Path {
+        &self.0
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Ctransid(pub u64);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Subvol<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) uuid: Uuid,
+    #[get_copy = "pub"]
     pub(crate) ctransid: Ctransid,
 }
 from_cmd!(Subvol);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Chmod<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) mode: Mode,
 }
 from_cmd!(Chmod);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Chown<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) uid: Uid,
+    #[get_copy = "pub"]
     pub(crate) gid: Gid,
 }
 from_cmd!(Chown);
@@ -137,14 +153,21 @@ from_cmd!(Chown);
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CloneLen(usize);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Clone<'a> {
+    #[get_copy = "pub"]
     pub(crate) src_offset: FileOffset,
+    #[get_copy = "pub"]
     pub(crate) len: CloneLen,
+    #[get = "pub"]
     pub(crate) src_path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) uuid: Uuid,
+    #[get_copy = "pub"]
     pub(crate) ctransid: Ctransid,
+    #[get = "pub"]
     pub(crate) dst_path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) dst_offset: FileOffset,
 }
 from_cmd!(Clone);
@@ -152,16 +175,20 @@ from_cmd!(Clone);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkTarget<'a>(Cow<'a, Path>);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Link<'a> {
+    #[get = "pub"]
     pub(crate) link_name: Cow<'a, Path>,
+    #[get = "pub"]
     pub(crate) target: LinkTarget<'a>,
 }
 from_cmd!(Link);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Mkdir<'a> {
+    #[get = "pub"]
     pub(crate) path: TemporaryPath<'a>,
+    #[get_copy = "pub"]
     pub(crate) ino: Ino,
 }
 from_cmd!(Mkdir);
@@ -169,64 +196,86 @@ from_cmd!(Mkdir);
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Rdev(pub u64);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Mkfifo<'a> {
+    #[get = "pub"]
     pub(crate) path: TemporaryPath<'a>,
+    #[get_copy = "pub"]
     pub(crate) ino: Ino,
+    #[get_copy = "pub"]
     pub(crate) rdev: Rdev,
+    #[get_copy = "pub"]
     pub(crate) mode: Mode,
 }
 from_cmd!(Mkfifo);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Mkfile<'a> {
+    #[get = "pub"]
     pub(crate) path: TemporaryPath<'a>,
+    #[get_copy = "pub"]
     pub(crate) ino: Ino,
 }
 from_cmd!(Mkfile);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Mknod<'a> {
+    #[get = "pub"]
     pub(crate) path: TemporaryPath<'a>,
+    #[get_copy = "pub"]
     pub(crate) ino: Ino,
+    #[get_copy = "pub"]
     pub(crate) rdev: Rdev,
+    #[get_copy = "pub"]
     pub(crate) mode: Mode,
 }
 from_cmd!(Mknod);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Mksock<'a> {
+    #[get = "pub"]
     pub(crate) path: TemporaryPath<'a>,
+    #[get_copy = "pub"]
     pub(crate) ino: Ino,
+    #[get_copy = "pub"]
     pub(crate) rdev: Rdev,
+    #[get_copy = "pub"]
     pub(crate) mode: Mode,
 }
 from_cmd!(Mksock);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct RemoveXattr<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get = "pub"]
     pub(crate) name: XattrName<'a>,
 }
 from_cmd!(RemoveXattr);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Rename<'a> {
+    #[get = "pub"]
     pub(crate) from: Cow<'a, Path>,
+    #[get = "pub"]
     pub(crate) to: Cow<'a, Path>,
 }
 from_cmd!(Rename);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Rmdir<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
 }
 from_cmd!(Rmdir);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Symlink<'a> {
+    #[get = "pub"]
     pub(crate) link_name: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) ino: Ino,
+    #[get = "pub"]
     pub(crate) target: LinkTarget<'a>,
 }
 from_cmd!(Symlink);
@@ -234,44 +283,58 @@ from_cmd!(Symlink);
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct XattrName<'a>(Cow<'a, OsStr>);
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct XattrData<'a>(Cow<'a, [u8]>);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct SetXattr<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get = "pub"]
     pub(crate) name: XattrName<'a>,
+    #[get = "pub"]
     pub(crate) data: XattrData<'a>,
 }
 from_cmd!(SetXattr);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Snapshot<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) uuid: Uuid,
+    #[get_copy = "pub"]
     pub(crate) ctransid: Ctransid,
+    #[get_copy = "pub"]
     pub(crate) clone_uuid: Uuid,
+    #[get_copy = "pub"]
     pub(crate) clone_ctransid: Ctransid,
 }
 from_cmd!(Snapshot);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Truncate<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) size: usize,
 }
 from_cmd!(Truncate);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Unlink<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
 }
 from_cmd!(Unlink);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct UpdateExtent<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) offset: FileOffset,
+    #[get_copy = "pub"]
     pub(crate) len: usize,
 }
 from_cmd!(UpdateExtent);
@@ -305,11 +368,15 @@ time_alias!(Atime);
 time_alias!(Ctime);
 time_alias!(Mtime);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Utimes<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) atime: Atime,
+    #[get_copy = "pub"]
     pub(crate) mtime: Mtime,
+    #[get_copy = "pub"]
     pub(crate) ctime: Ctime,
 }
 from_cmd!(Utimes);
@@ -337,10 +404,13 @@ impl<'a> std::fmt::Debug for Data<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Write<'a> {
+    #[get = "pub"]
     pub(crate) path: Cow<'a, Path>,
+    #[get_copy = "pub"]
     pub(crate) offset: FileOffset,
+    #[get = "pub"]
     pub(crate) data: Data<'a>,
 }
 from_cmd!(Write);
