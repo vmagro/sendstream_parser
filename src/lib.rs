@@ -175,6 +175,12 @@ from_cmd!(Clone);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkTarget<'a>(Cow<'a, Path>);
 
+impl<'a> LinkTarget<'a> {
+    pub fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Link<'a> {
     #[get = "pub"]
@@ -194,7 +200,13 @@ pub struct Mkdir<'a> {
 from_cmd!(Mkdir);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Rdev(pub u64);
+pub struct Rdev(u64);
+
+impl Rdev {
+    pub fn as_u64(self) -> u64 {
+        self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Mkfifo<'a> {
@@ -328,6 +340,7 @@ pub struct Unlink<'a> {
 }
 from_cmd!(Unlink);
 
+#[allow(clippy::len_without_is_empty)]
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct UpdateExtent<'a> {
     #[get = "pub"]
