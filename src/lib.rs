@@ -4,6 +4,8 @@ use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::path::Path;
 
+use derive_more::AsRef;
+use derive_more::Deref;
 use getset::CopyGetters;
 use getset::Getters;
 use nix::sys::stat::Mode;
@@ -292,11 +294,23 @@ pub struct Symlink<'a> {
 }
 from_cmd!(Symlink);
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 pub struct XattrName<'a>(Cow<'a, OsStr>);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl<'a> From<XattrName<'a>> for Cow<'a, OsStr> {
+    fn from(x: XattrName<'a>) -> Self {
+        x.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, AsRef, Deref)]
 pub struct XattrData<'a>(Cow<'a, [u8]>);
+
+impl<'a> From<XattrData<'a>> for Cow<'a, [u8]> {
+    fn from(x: XattrData<'a>) -> Self {
+        x.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct SetXattr<'a> {
@@ -394,14 +408,26 @@ pub struct Utimes<'a> {
 }
 from_cmd!(Utimes);
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 pub struct Ino(u64);
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 pub struct FileOffset(usize);
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+impl FileOffset {
+    pub fn as_u64(self) -> u64 {
+        self.0 as u64
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 pub struct Data<'a>(Cow<'a, [u8]>);
+
+impl<'a> Data<'a> {
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
+}
 
 impl<'a> std::fmt::Debug for Data<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
