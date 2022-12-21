@@ -5,7 +5,6 @@ use std::path::Path;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use nix::sys::stat::Mode;
 use nix::unistd::Gid;
 use nix::unistd::Uid;
 use nom::IResult;
@@ -154,8 +153,8 @@ tlv_impl!(Gid, 8, Gid, |data: [u8; 8]| -> Gid {
     Gid::from_raw(u64::from_le_bytes(data) as u32)
 });
 
-tlv_impl!(Mode, 8, Mode, |data: [u8; 8]| -> Mode {
-    Mode::from_bits_truncate(u64::from_le_bytes(data) as u32)
+tlv_impl!(crate::Mode, 8, Mode, |data: [u8; 8]| -> crate::Mode {
+    crate::Mode(u64::from_le_bytes(data) as u32)
 });
 
 tlv_impl!(crate::Ino, 8, Ino, |data: [u8; 8]| -> crate::Ino {

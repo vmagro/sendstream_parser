@@ -2,13 +2,14 @@
 
 use std::borrow::Cow;
 use std::ffi::OsStr;
+use std::os::unix::prelude::PermissionsExt;
 use std::path::Path;
 
 use derive_more::AsRef;
 use derive_more::Deref;
 use getset::CopyGetters;
 use getset::Getters;
-use nix::sys::stat::Mode;
+use nix::sys::stat::SFlag;
 use nix::unistd::Gid;
 use nix::unistd::Uid;
 use uuid::Uuid;
@@ -131,6 +132,32 @@ pub struct Subvol<'a> {
     pub(crate) ctransid: Ctransid,
 }
 from_cmd!(Subvol);
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
+pub struct Mode(u32);
+
+impl Mode {
+    pub fn as_u32(self) -> u32 {
+        self.0
+    }
+
+    pub fn permissions(self) -> std::fs::Permissions {
+        std::fs::Permissions::from_mode(self.0)
+    }
+
+    pub fn file_type(self) -> SFlag {
+        SFlag::from_bits_truncate(self.0)
+    }
+}
+
+impl std::fmt::Debug for Mode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Mode")
+            .field("permissions", &self.permissions())
+            .field("type", &self.file_type())
+            .finish()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Chmod<'a> {
