@@ -193,13 +193,13 @@ impl<'a> crate::Chown<'a> {
 
 impl<'a> crate::Clone<'a> {
     fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
-        let (input, src_offset) = parse_tlv(input)?;
+        let (input, dst_offset) = parse_tlv(input)?;
         let (input, len) = parse_tlv(input)?;
-        let (input, src_path) = parse_tlv(input)?;
+        let (input, dst_path) = parse_tlv(input)?;
         let (input, uuid) = parse_tlv_with_attr::<_, 16, attr_types::CloneUuid>(input)?;
         let (input, ctransid) = parse_tlv_with_attr::<_, 8, attr_types::CloneCtransid>(input)?;
-        let (input, dst_path) = parse_tlv_with_attr::<_, 0, attr_types::ClonePath>(input)?;
-        let (input, dst_offset) = parse_tlv_with_attr::<_, 8, attr_types::CloneOffset>(input)?;
+        let (input, src_path) = parse_tlv_with_attr::<_, 0, attr_types::ClonePath>(input)?;
+        let (input, src_offset) = parse_tlv_with_attr::<_, 8, attr_types::CloneOffset>(input)?;
         Ok((
             input,
             Self {

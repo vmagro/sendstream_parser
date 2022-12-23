@@ -17,15 +17,15 @@ use uuid::Uuid;
 mod wire;
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error<'a> {
+pub enum Error {
     // TODO(vmagro): expose more granular errors at some point?
     // #[error("parse error: {0:?}")]
     // Parse(nom::error::ErrorKind),
-    #[error("unexpected trailing data: {0:?}")]
-    TrailingData(&'a [u8]),
+    #[error("sendstream had unexpected trailing data: {0:?}")]
+    TrailingData(Vec<u8>),
 }
 
-pub type Result<'a, R> = std::result::Result<R, Error<'a>>;
+pub type Result<R> = std::result::Result<R, Error>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Sendstream<'a> {
@@ -179,8 +179,14 @@ pub struct Chown<'a> {
 }
 from_cmd!(Chown);
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 pub struct CloneLen(usize);
+
+impl CloneLen {
+    pub fn as_usize(self) -> usize {
+        self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Clone<'a> {
