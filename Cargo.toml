@@ -9,7 +9,6 @@ version = "0.1.0"
 
 [dependencies]
 derive_more = "0.99"
-getset = "0.1"
 hex = "0.4"
 nix = "0.26"
 nom = "7"
