@@ -12,5 +12,12 @@ derive_more = "0.99"
 hex = "0.4"
 nix = "0.26"
 nom = "7"
+serde = {version = "1", features = ["derive"], optional = true}
 thiserror = "1"
 uuid = "1"
+
+[features]
+serde = ["dep:serde", "uuid/serde"]
+
+[dev-dependencies]
+toml = "0.5"

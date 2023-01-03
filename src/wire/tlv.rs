@@ -165,7 +165,7 @@ tlv_impl!(
     crate::XattrName<'i>,
     XattrName,
     |data: &'i [u8]| -> crate::XattrName<'i> {
-        crate::XattrName(OsStr::from_bytes(data))
+        crate::XattrName(data)
     }
 );
 
