@@ -1,8 +1,6 @@
 #![feature(macro_metavar_expr)]
 
 use std::borrow::Cow;
-use std::ffi::OsStr;
-use std::os::unix::prelude::OsStrExt;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::Path;
 
@@ -34,7 +32,9 @@ pub enum Error {
 pub type Result<R> = std::result::Result<R, Error>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Sendstream<'a> {
+    #[cfg_attr(feature = "serde", serde(borrow))]
     commands: Vec<Command<'a>>,
 }
 
@@ -51,6 +51,7 @@ impl<'a> Sendstream<'a> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum Command<'a> {
     Chmod(Chmod<'a>),
     Chown(Chown<'a>),
@@ -148,6 +149,7 @@ macro_rules! getters {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 #[as_ref(forward)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct TemporaryPath<'a>(#[cfg_attr(feature = "serde", serde(borrow))] pub(crate) &'a Path);
 
 impl<'a> TemporaryPath<'a> {
@@ -158,6 +160,7 @@ impl<'a> TemporaryPath<'a> {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Ctransid(pub u64);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -173,6 +176,7 @@ getters! {Subvol, [(path, Path, borrow), (uuid, Uuid, copy), (ctransid, Ctransid
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Mode(u32);
 
 impl Mode {
@@ -223,6 +227,7 @@ getters! {Chown, [(path, Path, borrow), (uid, Uid, copy), (gid, Gid, copy)]}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct CloneLen(usize);
 
 impl CloneLen {
@@ -258,6 +263,7 @@ getters! {Clone, [
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 #[as_ref(forward)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct LinkTarget<'a>(#[cfg_attr(feature = "serde", serde(borrow))] &'a Path);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -283,6 +289,7 @@ getters! {Mkdir, [(path, TemporaryPath, borrow), (ino, Ino, copy)]}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Rdev(u64);
 
 impl Rdev {
@@ -311,6 +318,7 @@ macro_rules! special {
     ($t:ident) => {
         #[derive(Debug, Clone, PartialEq, Eq, AsRef, Deref)]
         #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+        #[cfg_attr(feature = "serde", serde(transparent))]
         #[repr(transparent)]
         pub struct $t<'a>(#[cfg_attr(feature = "serde", serde(borrow))] Mkspecial<'a>);
         from_cmd!($t);
@@ -373,18 +381,11 @@ from_cmd!(Symlink);
 getters! {Symlink, [(link_name, Path, borrow), (ino, Ino, copy), (target, LinkTarget, borrow)]}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref, From)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[as_ref(forward)]
 #[from(forward)]
 pub struct XattrName<'a>(&'a [u8]);
 
-impl<'a> AsRef<OsStr> for XattrName<'a> {
-    fn as_ref(&self) -> &OsStr {
-        OsStr::from_bytes(&self.0)
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, AsRef, Deref, From)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[as_ref(forward)]
 #[from(forward)]
 pub struct XattrData<'a>(&'a [u8]);
@@ -454,6 +455,7 @@ macro_rules! time_alias {
     ($a:ident) => {
         #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
         #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+        #[cfg_attr(feature = "serde", serde(transparent))]
         #[as_ref(forward)]
         #[repr(transparent)]
         pub struct $a(std::time::SystemTime);
@@ -478,10 +480,12 @@ getters! {Utimes, [(path, Path, borrow), (atime, Atime, copy), (mtime, Mtime,cop
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Ino(u64);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct FileOffset(usize);
 
 impl FileOffset {
@@ -490,8 +494,7 @@ impl FileOffset {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref, From)]
 #[as_ref(forward)]
 pub struct Data<'a>(&'a [u8]);
 
@@ -510,7 +513,13 @@ impl<'a> std::fmt::Debug for Data<'a> {
         if s.len() <= 128 {
             write!(f, "{s:?}")
         } else {
-            write!(f, "{:?} <truncated> {:?}", &s[..64], &s[s.len() - 64..])
+            write!(
+                f,
+                "{:?} <truncated ({}b total)> {:?}",
+                &s[..64],
+                s.len(),
+                &s[s.len() - 64..]
+            )
         }
     }
 }
@@ -525,3 +534,71 @@ pub struct Write<'a> {
 }
 from_cmd!(Write);
 getters! {Write, [(path, Path, borrow), (offset, FileOffset, copy), (data, Data, borrow)]}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+    use std::ffi::OsString;
+    use std::fmt::Write;
+
+    use similar_asserts::SimpleDiff;
+
+    use super::*;
+
+    // serialize sendstream commands to diffable text
+    fn serialize_to_txt(sendstreams: &[Sendstream]) -> String {
+        let mut out = String::new();
+        for (i, s) in sendstreams.iter().enumerate() {
+            writeln!(out, "BEGIN SENDSTREAM {i}").unwrap();
+            for cmd in s.commands() {
+                writeln!(out, "{cmd:?}").unwrap();
+            }
+            writeln!(out, "END SENDSTREAM {i}").unwrap();
+        }
+        out
+    }
+
+    #[test]
+    fn parse_demo() {
+        let sendstreams = Sendstream::parse_all(include_bytes!("../testdata/demo.sendstream"))
+            .expect("failed to parse demo.sendstream");
+        let parsed_txt = serialize_to_txt(&sendstreams);
+        if std::env::var_os("UPDATE_DEMO_TXT") == Some(OsString::from("1")) {
+            std::fs::write(
+                Path::new(env!("CARGO_MANIFEST_DIR")).join("testdata/demo.txt"),
+                serialize_to_txt(&sendstreams),
+            )
+            .unwrap();
+        } else {
+            let good_txt = include_str!("../testdata/demo.txt");
+            // pretty_assertions::assert_str_eq!(parsed_txt, include_str!("../testdata/demo.txt"));
+            if parsed_txt != good_txt {
+                panic!(
+                    "{}",
+                    SimpleDiff::from_str(&parsed_txt, good_txt, "parsed", "good")
+                )
+            }
+        }
+    }
+
+    #[test]
+    fn sendstream_covers_all_commands() {
+        let all_cmds: BTreeSet<_> = wire::cmd::CommandType::iter()
+            .filter(|c| *c != wire::cmd::CommandType::Unspecified)
+            // update_extent is used for no-file-data sendstreams (`btrfs send
+            // --no-data`), so it's not super useful to cover here
+            .filter(|c| *c != wire::cmd::CommandType::UpdateExtent)
+            .collect();
+        let sendstreams = Sendstream::parse_all(include_bytes!("../testdata/demo.sendstream"))
+            .expect("failed to parse demo.sendstream");
+        let seen_cmds = sendstreams
+            .iter()
+            .flat_map(|s| s.commands.iter().map(|c| c.command_type()))
+            .collect();
+
+        if all_cmds != seen_cmds {
+            let missing: BTreeSet<_> = all_cmds.difference(&seen_cmds).collect();
+            panic!("sendstream did not include some commands: {:?}", missing,);
+        }
+    }
+}

@@ -17,7 +17,7 @@ pushd demo
 mkdir hello
 echo "Hello world!" > hello/msg
 chmod 0400 hello/msg
-setfattr -n user.antlir.demo -v '{"hello": "world"}' hello/msg
+setfattr -n user.antlir.demo -v 'lorem ipsum' hello/msg
 chown root:root hello/msg
 mkfifo myfifo
 ln -s hello/msg hello/msg-sym

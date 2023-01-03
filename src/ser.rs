@@ -1,9 +1,16 @@
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
+use serde::Serializer;
+
+use crate::Data;
+use crate::XattrData;
+use crate::XattrName;
+
 pub(crate) mod uid {
     use nix::unistd::Uid;
-    use serde::Deserialize;
-    use serde::Deserializer;
-    use serde::Serialize;
-    use serde::Serializer;
+
+    use super::*;
 
     pub fn deserialize<'de, D>(d: D) -> Result<Uid, D::Error>
     where
@@ -22,10 +29,8 @@ pub(crate) mod uid {
 
 pub(crate) mod gid {
     use nix::unistd::Gid;
-    use serde::Deserialize;
-    use serde::Deserializer;
-    use serde::Serialize;
-    use serde::Serializer;
+
+    use super::*;
 
     pub fn deserialize<'de, D>(d: D) -> Result<Gid, D::Error>
     where
@@ -41,3 +46,56 @@ pub(crate) mod gid {
         g.as_raw().serialize(s)
     }
 }
+
+pub(crate) mod utf8 {
+    use serde::ser::Error;
+
+    use super::*;
+
+    pub fn deserialize<'de, D, T>(d: D) -> Result<T, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: From<&'de [u8]>,
+    {
+        <&str>::deserialize(d).map(|s| s.as_bytes()).map(T::from)
+    }
+
+    pub fn serialize<S, T>(t: T, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+        T: AsRef<[u8]>,
+    {
+        std::str::from_utf8(t.as_ref())
+            .map_err(|_| S::Error::custom("not utf8 string"))
+            .and_then(|d| d.serialize(s))
+    }
+}
+
+macro_rules! utf8_serde {
+    ($t:ident) => {
+        impl<'a, 'de> Deserialize<'de> for $t<'a>
+        where
+            'de: 'a,
+        {
+            fn deserialize<D>(d: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                crate::ser::utf8::deserialize(d)
+            }
+        }
+
+        impl<'a> Serialize for $t<'a> {
+            fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                crate::ser::utf8::serialize(self, s)
+            }
+        }
+    };
+}
+
+utf8_serde!(Data);
+utf8_serde!(XattrName);
+utf8_serde!(XattrData);

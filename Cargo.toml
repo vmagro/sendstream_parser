@@ -17,7 +17,8 @@ thiserror = "1"
 uuid = "1"
 
 [features]
+default = ["serde"]
 serde = ["dep:serde", "uuid/serde"]
 
 [dev-dependencies]
-toml = "0.5"
+similar-asserts = "1.4"
