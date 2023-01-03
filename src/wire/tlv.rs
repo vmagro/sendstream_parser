@@ -44,6 +44,7 @@ where
             let (input, data) = nom::bytes::complete::take(L)(input)?;
             Ok((
                 input,
+                #[allow(clippy::expect_used)]
                 T::parse_exact(data.try_into().expect("length is already checked")),
             ))
         }
@@ -220,7 +221,9 @@ tlv_impl!(usize, 8, Size, |data: [u8; 8]| -> usize {
 });
 
 fn parse_time(data: [u8; 12]) -> SystemTime {
+    #[allow(clippy::expect_used)]
     let secs = u64::from_le_bytes(data[..8].try_into().expect("right size"));
+    #[allow(clippy::expect_used)]
     let nanos = u32::from_le_bytes(data[8..].try_into().expect("right size"));
     SystemTime::UNIX_EPOCH + Duration::from_secs(secs) + Duration::from_nanos(nanos.into())
 }

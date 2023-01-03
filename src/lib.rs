@@ -1,4 +1,6 @@
 #![feature(macro_metavar_expr)]
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
 
 use std::borrow::Cow;
 use std::os::unix::prelude::PermissionsExt;
@@ -160,12 +162,6 @@ macro_rules! getters {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct TemporaryPath<'a>(#[cfg_attr(feature = "serde", serde(borrow))] pub(crate) &'a Path);
-
-impl<'a> TemporaryPath<'a> {
-    pub fn path(&self) -> &Path {
-        &self.0
-    }
-}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -509,15 +505,15 @@ pub struct Data<'a>(&'a [u8]);
 
 impl<'a> Data<'a> {
     pub fn as_slice(&self) -> &[u8] {
-        &self.0
+        self.0
     }
 }
 
 impl<'a> std::fmt::Debug for Data<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match std::str::from_utf8(&self.0) {
+        let s = match std::str::from_utf8(self.0) {
             Ok(s) => Cow::Borrowed(s),
-            Err(_) => Cow::Owned(hex::encode(&self.0)),
+            Err(_) => Cow::Owned(hex::encode(self.0)),
         };
         if s.len() <= 128 {
             write!(f, "{s:?}")
