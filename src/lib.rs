@@ -1,3 +1,8 @@
+//! Rust parser for [BTRFS
+//! Sendstreams](https://btrfs.readthedocs.io/en/latest/Send-receive.html)
+//! which are created via
+//! [btrfs-send](https://btrfs.readthedocs.io/en/latest/btrfs-send.html).
+
 #![feature(macro_metavar_expr)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
@@ -42,6 +47,8 @@ impl<'a> From<nom::error::Error<&'a [u8]>> for Error<'a> {
 
 pub type Result<'a, R> = std::result::Result<R, Error<'a>>;
 
+/// This is the main entrypoint of this crate. It provides access to the
+/// sequence of [Command]s that make up this sendstream.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Sendstream<'a> {
