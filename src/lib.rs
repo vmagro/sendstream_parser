@@ -284,6 +284,12 @@ getters! {Clone, [
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct LinkTarget<'a>(#[cfg_attr(feature = "serde", serde(borrow))] &'a Path);
 
+impl<'a> LinkTarget<'a> {
+    pub fn as_path(&self) -> &Path {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Link<'a> {
