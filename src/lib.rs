@@ -170,6 +170,12 @@ macro_rules! getters {
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct TemporaryPath<'a>(#[cfg_attr(feature = "serde", serde(borrow))] pub(crate) &'a Path);
 
+impl<'a> TemporaryPath<'a> {
+    pub fn as_path(&self) -> &Path {
+        self.as_ref()
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]

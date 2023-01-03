@@ -5,7 +5,7 @@ keywords = ["btrfs", "sendstream"]
 license = "MIT"
 name = "sendstream_parser"
 repository = "https://github.com/vmagro/sendstream_parser/"
-version = "0.2.0"
+version = "0.2.1"
 
 [dependencies]
 derive_more = "0.99"
