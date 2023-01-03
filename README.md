@@ -1,5 +1,5 @@
-![CI](https://github.com/vmagro/sendstream_parser/actions/workflows/main.yml/badge.svg)
-![docs.rs](https://img.shields.io/docsrs/sendstream_parser)
+[![Workflow Status](https://github.com/vmagro/sendstream_parser/actions/workflows/main.yml/badge.svg)](https://github.com/vmagro/sendstream_parser/actions)
+[![docs.rs](https://img.shields.io/docsrs/sendstream_parser)](https://docs.rs/sendstream_parser)
 ![Maintenance](https://img.shields.io/badge/maintenance-experimental-blue.svg)
 
 # sendstream_parser
