@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
@@ -115,9 +114,9 @@ macro_rules! tlv_impl {
 
 tlv_impl!(
     'i,
-    Cow<'i, Path>,
+    &'i Path,
     Path,
-    |data: &'i [u8]| -> Cow<'i, Path> { Cow::Borrowed(Path::new(OsStr::from_bytes(data))) },
+    |data: &'i [u8]| -> &'i Path { Path::new(OsStr::from_bytes(data)) },
     PathTo,
     ClonePath
 );
@@ -126,7 +125,7 @@ tlv_impl!(
     'i,
     crate::TemporaryPath<'i>,
     Path,
-    |data: &'i [u8]| -> crate::TemporaryPath<'i> { crate::TemporaryPath(Cow::Borrowed(Path::new(OsStr::from_bytes(data)))) }
+    |data: &'i [u8]| -> crate::TemporaryPath<'i> { crate::TemporaryPath(Path::new(OsStr::from_bytes(data))) }
 );
 
 tlv_impl!(
@@ -166,7 +165,7 @@ tlv_impl!(
     crate::XattrName<'i>,
     XattrName,
     |data: &'i [u8]| -> crate::XattrName<'i> {
-        crate::XattrName(Cow::Borrowed(OsStr::from_bytes(data)))
+        crate::XattrName(OsStr::from_bytes(data))
     }
 );
 
@@ -175,7 +174,7 @@ tlv_impl!(
     crate::XattrData<'i>,
     XattrData,
     |data: &'i [u8]| -> crate::XattrData<'i> {
-        crate::XattrData(Cow::Borrowed(data))
+        crate::XattrData(data)
     }
 );
 
@@ -192,7 +191,7 @@ tlv_impl!(
     crate::Data<'i>,
     Data,
     |data: &'i [u8]| -> crate::Data<'i> {
-        crate::Data(Cow::Borrowed(data))
+        crate::Data(data)
     }
 );
 
@@ -201,7 +200,7 @@ tlv_impl!(
     crate::LinkTarget<'i>,
     Link,
     |data: &'i [u8]| -> crate::LinkTarget<'i> {
-        crate::LinkTarget(Cow::Borrowed(Path::new(OsStr::from_bytes(data))))
+        crate::LinkTarget(Path::new(OsStr::from_bytes(data)))
     }
 );
 

@@ -36,6 +36,10 @@ impl<'a> Sendstream<'a> {
     pub fn commands(&self) -> &[Command<'a>] {
         &self.commands
     }
+
+    pub fn into_commands(self) -> Vec<Command<'a>> {
+        self.commands
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,7 +115,7 @@ macro_rules! from_cmd {
 /// it will end up with an opaque name that will end up getting renamed to the
 /// final name later in the stream.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TemporaryPath<'a>(pub(crate) Cow<'a, Path>);
+pub struct TemporaryPath<'a>(pub(crate) &'a Path);
 
 impl<'a> TemporaryPath<'a> {
     pub fn path(&self) -> &Path {
@@ -125,7 +129,7 @@ pub struct Ctransid(pub u64);
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Subvol<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
     #[get_copy = "pub"]
     pub(crate) uuid: Uuid,
     #[get_copy = "pub"]
@@ -139,6 +143,10 @@ pub struct Mode(u32);
 impl Mode {
     pub fn as_u32(self) -> u32 {
         self.0
+    }
+
+    pub fn mode(self) -> nix::sys::stat::Mode {
+        nix::sys::stat::Mode::from_bits_truncate(self.0)
     }
 
     pub fn permissions(self) -> std::fs::Permissions {
@@ -159,19 +167,27 @@ impl std::fmt::Debug for Mode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Chmod<'a> {
-    #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
-    #[get_copy = "pub"]
+    pub(crate) path: &'a Path,
     pub(crate) mode: Mode,
 }
 from_cmd!(Chmod);
 
+impl<'a> Chmod<'a> {
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn mode(&self) -> Mode {
+        self.mode
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Chown<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
     #[get_copy = "pub"]
     pub(crate) uid: Uid,
     #[get_copy = "pub"]
@@ -195,20 +211,20 @@ pub struct Clone<'a> {
     #[get_copy = "pub"]
     pub(crate) len: CloneLen,
     #[get = "pub"]
-    pub(crate) src_path: Cow<'a, Path>,
+    pub(crate) src_path: &'a Path,
     #[get_copy = "pub"]
     pub(crate) uuid: Uuid,
     #[get_copy = "pub"]
     pub(crate) ctransid: Ctransid,
     #[get = "pub"]
-    pub(crate) dst_path: Cow<'a, Path>,
+    pub(crate) dst_path: &'a Path,
     #[get_copy = "pub"]
     pub(crate) dst_offset: FileOffset,
 }
 from_cmd!(Clone);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LinkTarget<'a>(Cow<'a, Path>);
+pub struct LinkTarget<'a>(&'a Path);
 
 impl<'a> LinkTarget<'a> {
     pub fn path(&self) -> &Path {
@@ -219,7 +235,7 @@ impl<'a> LinkTarget<'a> {
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Link<'a> {
     #[get = "pub"]
-    pub(crate) link_name: Cow<'a, Path>,
+    pub(crate) link_name: &'a Path,
     #[get = "pub"]
     pub(crate) target: LinkTarget<'a>,
 }
@@ -294,32 +310,40 @@ from_cmd!(Mksock);
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct RemoveXattr<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
     #[get = "pub"]
     pub(crate) name: XattrName<'a>,
 }
 from_cmd!(RemoveXattr);
 
-#[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rename<'a> {
-    #[get = "pub"]
-    pub(crate) from: Cow<'a, Path>,
-    #[get = "pub"]
-    pub(crate) to: Cow<'a, Path>,
+    pub(crate) from: &'a Path,
+    pub(crate) to: &'a Path,
 }
 from_cmd!(Rename);
+
+impl<'a> Rename<'a> {
+    pub fn from(&self) -> &Path {
+        &self.from
+    }
+
+    pub fn to(&self) -> &Path {
+        &self.to
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Rmdir<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
 }
 from_cmd!(Rmdir);
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Symlink<'a> {
     #[get = "pub"]
-    pub(crate) link_name: Cow<'a, Path>,
+    pub(crate) link_name: &'a Path,
     #[get_copy = "pub"]
     pub(crate) ino: Ino,
     #[get = "pub"]
@@ -328,18 +352,18 @@ pub struct Symlink<'a> {
 from_cmd!(Symlink);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
-pub struct XattrName<'a>(Cow<'a, OsStr>);
+pub struct XattrName<'a>(&'a OsStr);
 
-impl<'a> From<XattrName<'a>> for Cow<'a, OsStr> {
+impl<'a> From<XattrName<'a>> for &'a OsStr {
     fn from(x: XattrName<'a>) -> Self {
         x.0
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, AsRef, Deref)]
-pub struct XattrData<'a>(Cow<'a, [u8]>);
+pub struct XattrData<'a>(&'a [u8]);
 
-impl<'a> From<XattrData<'a>> for Cow<'a, [u8]> {
+impl<'a> From<XattrData<'a>> for &'a [u8] {
     fn from(x: XattrData<'a>) -> Self {
         x.0
     }
@@ -348,7 +372,7 @@ impl<'a> From<XattrData<'a>> for Cow<'a, [u8]> {
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct SetXattr<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
     #[get = "pub"]
     pub(crate) name: XattrName<'a>,
     #[get = "pub"]
@@ -359,7 +383,7 @@ from_cmd!(SetXattr);
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Snapshot<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
     #[get_copy = "pub"]
     pub(crate) uuid: Uuid,
     #[get_copy = "pub"]
@@ -374,7 +398,7 @@ from_cmd!(Snapshot);
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Truncate<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
     #[get_copy = "pub"]
     pub(crate) size: usize,
 }
@@ -383,7 +407,7 @@ from_cmd!(Truncate);
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Unlink<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
 }
 from_cmd!(Unlink);
 
@@ -391,7 +415,7 @@ from_cmd!(Unlink);
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct UpdateExtent<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
     #[get_copy = "pub"]
     pub(crate) offset: FileOffset,
     #[get_copy = "pub"]
@@ -431,7 +455,7 @@ time_alias!(Mtime);
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Utimes<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
     #[get_copy = "pub"]
     pub(crate) atime: Atime,
     #[get_copy = "pub"]
@@ -454,7 +478,7 @@ impl FileOffset {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
-pub struct Data<'a>(Cow<'a, [u8]>);
+pub struct Data<'a>(&'a [u8]);
 
 impl<'a> Data<'a> {
     pub fn as_slice(&self) -> &[u8] {
@@ -479,7 +503,7 @@ impl<'a> std::fmt::Debug for Data<'a> {
 #[derive(Debug, Clone, PartialEq, Eq, Getters, CopyGetters)]
 pub struct Write<'a> {
     #[get = "pub"]
-    pub(crate) path: Cow<'a, Path>,
+    pub(crate) path: &'a Path,
     #[get_copy = "pub"]
     pub(crate) offset: FileOffset,
     #[get = "pub"]

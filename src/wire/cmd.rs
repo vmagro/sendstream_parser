@@ -50,14 +50,6 @@ macro_rules! command_type {
         }
 
         impl $enm {
-            #[cfg(test)]
-            const fn as_u16(self) -> u16 {
-                match self {
-                    $(Self::$v => ${index()},)+
-                    Self::Unknown(u) => u,
-                }
-            }
-
             const fn from_u16(u: u16) -> Self {
                 match u {
                     $(${index()} => Self::$v,)+
