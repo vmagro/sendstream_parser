@@ -19,12 +19,18 @@ impl<'a> Sendstream<'a> {
     }
 
     pub fn parse_all(input: &'a [u8]) -> Result<Vec<Self>> {
-        let (left, sendstreams) =
-            nom::combinator::complete(nom::multi::many1(Sendstream::parse))(input).expect("todo");
-        if !left.is_empty() {
-            Err(Error::TrailingData(left.to_vec()))
-        } else {
-            Ok(sendstreams)
+        match nom::combinator::complete(nom::multi::many1(Sendstream::parse))(input) {
+            Ok((left, sendstreams)) => {
+                if !left.is_empty() {
+                    Err(Error::TrailingData(left.to_vec()))
+                } else {
+                    Ok(sendstreams)
+                }
+            }
+            Err(e) => match e {
+                nom::Err::Error(e) | nom::Err::Failure(e) => Err(e.into()),
+                nom::Err::Incomplete(_) => Err(Error::Incomplete),
+            },
         }
     }
 }

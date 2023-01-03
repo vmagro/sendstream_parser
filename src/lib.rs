@@ -21,15 +21,24 @@ mod ser;
 mod wire;
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {
-    // TODO(vmagro): expose more granular errors at some point?
-    // #[error("parse error: {0:?}")]
-    // Parse(nom::error::ErrorKind),
-    #[error("sendstream had unexpected trailing data: {0:?}")]
+pub enum Error<'a> {
+    #[error("Parse error: {0:?}")]
+    Parse(nom::error::Error<&'a [u8]>),
+    #[error(
+        "Sendstream had unexpected trailing data. This probably means the parser is broken: {0:?}"
+    )]
     TrailingData(Vec<u8>),
+    #[error("Sendstream is incomplete")]
+    Incomplete,
 }
 
-pub type Result<R> = std::result::Result<R, Error>;
+impl<'a> From<nom::error::Error<&'a [u8]>> for Error<'a> {
+    fn from(e: nom::error::Error<&'a [u8]>) -> Self {
+        Self::Parse(e)
+    }
+}
+
+pub type Result<'a, R> = std::result::Result<R, Error<'a>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -571,7 +580,6 @@ mod tests {
             .unwrap();
         } else {
             let good_txt = include_str!("../testdata/demo.txt");
-            // pretty_assertions::assert_str_eq!(parsed_txt, include_str!("../testdata/demo.txt"));
             if parsed_txt != good_txt {
                 panic!(
                     "{}",
