@@ -267,19 +267,30 @@ impl Rdev {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Mkfifo<'a> {
+pub struct Mkspecial<'a> {
     pub(crate) path: TemporaryPath<'a>,
     pub(crate) ino: Ino,
     pub(crate) rdev: Rdev,
     pub(crate) mode: Mode,
 }
-from_cmd!(Mkfifo);
-getters! {Mkfifo, [
+getters! {Mkspecial, [
     (path, TemporaryPath, borrow),
     (ino, Ino, copy),
     (rdev, Rdev, copy),
     (mode, Mode, copy)
 ]}
+
+macro_rules! special {
+    ($t:ident) => {
+        #[derive(Debug, Clone, PartialEq, Eq, AsRef, Deref)]
+        #[repr(transparent)]
+        pub struct $t<'a>(Mkspecial<'a>);
+        from_cmd!($t);
+    };
+}
+special!(Mkfifo);
+special!(Mknod);
+special!(Mksock);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Mkfile<'a> {
@@ -288,36 +299,6 @@ pub struct Mkfile<'a> {
 }
 from_cmd!(Mkfile);
 getters! {Mkfile, [(path, TemporaryPath, borrow), (ino, Ino, copy)]}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Mknod<'a> {
-    pub(crate) path: TemporaryPath<'a>,
-    pub(crate) ino: Ino,
-    pub(crate) rdev: Rdev,
-    pub(crate) mode: Mode,
-}
-from_cmd!(Mknod);
-getters! {Mknod, [
-    (path, TemporaryPath, borrow),
-    (ino, Ino, copy),
-    (rdev, Rdev, copy),
-    (mode, Mode, copy)
-]}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Mksock<'a> {
-    pub(crate) path: TemporaryPath<'a>,
-    pub(crate) ino: Ino,
-    pub(crate) rdev: Rdev,
-    pub(crate) mode: Mode,
-}
-from_cmd!(Mksock);
-getters! {Mksock, [
-    (path, TemporaryPath, borrow),
-    (ino, Ino, copy),
-    (rdev, Rdev, copy),
-    (mode, Mode, copy)
-]}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RemoveXattr<'a> {

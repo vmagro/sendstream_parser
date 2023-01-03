@@ -122,7 +122,6 @@ impl<'a> crate::Command<'a> {
         let (cmd_remaining, cmd): (_, crate::Command) = parse_subtypes!(
             hdr,
             cmd_data,
-            Subvol,
             Chmod,
             Chown,
             Clone,
@@ -137,6 +136,7 @@ impl<'a> crate::Command<'a> {
             Rmdir,
             SetXattr,
             Snapshot,
+            Subvol,
             Symlink,
             Truncate,
             Unlink,
@@ -247,32 +247,37 @@ impl<'a> crate::Mkfile<'a> {
     }
 }
 
-// These all have the same fields, so parse them with a macro
-macro_rules! mknod {
-    ($i:ident) => {
-        impl<'a> crate::$i<'a> {
+impl<'a> crate::Mkspecial<'a> {
+    fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
+        let (input, path) = parse_tlv(input)?;
+        let (input, ino) = parse_tlv(input)?;
+        let (input, rdev) = parse_tlv(input)?;
+        let (input, mode) = parse_tlv(input)?;
+        Ok((
+            input,
+            Self {
+                path,
+                ino,
+                rdev,
+                mode,
+            },
+        ))
+    }
+}
+
+macro_rules! mkspecial {
+    ($t:ident) => {
+        impl<'a> crate::$t<'a> {
             fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
-                let (input, path) = parse_tlv(input)?;
-                let (input, ino) = parse_tlv(input)?;
-                let (input, rdev) = parse_tlv(input)?;
-                let (input, mode) = parse_tlv(input)?;
-                Ok((
-                    input,
-                    Self {
-                        path,
-                        ino,
-                        rdev,
-                        mode,
-                    },
-                ))
+                crate::Mkspecial::parse(input).map(|(r, s)| (r, Self(s)))
             }
         }
     };
 }
 
-mknod!(Mknod);
-mknod!(Mkfifo);
-mknod!(Mksock);
+mkspecial!(Mknod);
+mkspecial!(Mkfifo);
+mkspecial!(Mksock);
 
 impl<'a> crate::RemoveXattr<'a> {
     fn parse(input: &'a [u8]) -> IResult<&[u8], Self> {
