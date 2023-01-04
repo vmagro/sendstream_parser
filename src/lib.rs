@@ -246,10 +246,10 @@ getters! {Chown, [(path, Path, borrow), (uid, Uid, copy), (gid, Gid, copy)]}
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
-pub struct CloneLen(usize);
+pub struct CloneLen(u64);
 
 impl CloneLen {
-    pub fn as_usize(self) -> usize {
+    pub fn as_u64(self) -> u64 {
         self.0
     }
 }
@@ -311,7 +311,7 @@ pub struct Mkdir<'a> {
 from_cmd!(Mkdir);
 getters! {Mkdir, [(path, TemporaryPath, borrow), (ino, Ino, copy)]}
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Rdev(u64);
@@ -449,10 +449,10 @@ getters! {Snapshot, [
 pub struct Truncate<'a> {
     #[cfg_attr(feature = "serde", serde(borrow))]
     pub(crate) path: &'a Path,
-    pub(crate) size: usize,
+    pub(crate) size: u64,
 }
 from_cmd!(Truncate);
-getters! {Truncate, [(path, Path, borrow), (size, usize, copy)]}
+getters! {Truncate, [(path, Path, borrow), (size, u64, copy)]}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -470,10 +470,10 @@ pub struct UpdateExtent<'a> {
     #[cfg_attr(feature = "serde", serde(borrow))]
     pub(crate) path: &'a Path,
     pub(crate) offset: FileOffset,
-    pub(crate) len: usize,
+    pub(crate) len: u64,
 }
 from_cmd!(UpdateExtent);
-getters! {UpdateExtent, [(path, Path, borrow), (offset, FileOffset, copy), (len, usize, copy)]}
+getters! {UpdateExtent, [(path, Path, borrow), (offset, FileOffset, copy), (len, u64, copy)]}
 
 macro_rules! time_alias {
     ($a:ident) => {
@@ -510,11 +510,11 @@ pub struct Ino(u64);
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
-pub struct FileOffset(usize);
+pub struct FileOffset(u64);
 
 impl FileOffset {
     pub fn as_u64(self) -> u64 {
-        self.0 as u64
+        self.0
     }
 }
 

@@ -183,7 +183,7 @@ tlv_impl!(
     crate::FileOffset,
     8,
     FileOffset,
-    |data: [u8; 8]| -> crate::FileOffset { crate::FileOffset(usize::from_le_bytes(data)) },
+    |data: [u8; 8]| -> crate::FileOffset { crate::FileOffset(u64::from_le_bytes(data)) },
     CloneOffset
 );
 
@@ -213,11 +213,11 @@ tlv_impl!(
     crate::CloneLen,
     8,
     CloneLen,
-    |data: [u8; 8]| -> crate::CloneLen { crate::CloneLen(usize::from_le_bytes(data)) }
+    |data: [u8; 8]| -> crate::CloneLen { crate::CloneLen(u64::from_le_bytes(data)) }
 );
 
-tlv_impl!(usize, 8, Size, |data: [u8; 8]| -> usize {
-    usize::from_le_bytes(data)
+tlv_impl!(u64, 8, Size, |data: [u8; 8]| -> u64 {
+    u64::from_le_bytes(data)
 });
 
 fn parse_time(data: [u8; 12]) -> SystemTime {
