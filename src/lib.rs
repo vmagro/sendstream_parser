@@ -8,6 +8,7 @@
 #![deny(clippy::expect_used)]
 
 use std::borrow::Cow;
+use std::ops::Deref;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::Path;
 
@@ -164,7 +165,7 @@ macro_rules! getters {
 /// directory may not exist at the time that a creation command is emitted, so
 /// it will end up with an opaque name that will end up getting renamed to the
 /// final name later in the stream.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef)]
 #[as_ref(forward)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
@@ -173,6 +174,15 @@ pub struct TemporaryPath<'a>(#[cfg_attr(feature = "serde", serde(borrow))] pub(c
 impl<'a> TemporaryPath<'a> {
     pub fn as_path(&self) -> &Path {
         self.as_ref()
+    }
+}
+
+impl<'a> Deref for TemporaryPath<'a> {
+    type Target = Path;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.0
     }
 }
 
@@ -278,14 +288,24 @@ getters! {Clone, [
     (dst_offset, FileOffset, copy)
 ]}
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef)]
 #[as_ref(forward)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct LinkTarget<'a>(#[cfg_attr(feature = "serde", serde(borrow))] &'a Path);
 
 impl<'a> LinkTarget<'a> {
+    #[inline]
     pub fn as_path(&self) -> &Path {
+        self.0
+    }
+}
+
+impl<'a> Deref for LinkTarget<'a> {
+    type Target = Path;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
         self.0
     }
 }
@@ -404,15 +424,47 @@ pub struct Symlink<'a> {
 from_cmd!(Symlink);
 getters! {Symlink, [(link_name, Path, borrow), (ino, Ino, copy), (target, LinkTarget, borrow)]}
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref, From)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, From)]
 #[as_ref(forward)]
 #[from(forward)]
 pub struct XattrName<'a>(&'a [u8]);
 
-#[derive(Debug, Clone, PartialEq, Eq, AsRef, Deref, From)]
+impl<'a> XattrName<'a> {
+    #[inline]
+    pub fn as_slice(&self) -> &[u8] {
+        self.0
+    }
+}
+
+impl<'a> Deref for XattrName<'a> {
+    type Target = [u8];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, AsRef, From)]
 #[as_ref(forward)]
 #[from(forward)]
 pub struct XattrData<'a>(&'a [u8]);
+
+impl<'a> XattrData<'a> {
+    #[inline]
+    pub fn as_slice(&self) -> &[u8] {
+        self.0
+    }
+}
+
+impl<'a> Deref for XattrData<'a> {
+    type Target = [u8];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -518,12 +570,22 @@ impl FileOffset {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, Deref, From)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, AsRef, From)]
 #[as_ref(forward)]
 pub struct Data<'a>(&'a [u8]);
 
 impl<'a> Data<'a> {
+    #[inline]
     pub fn as_slice(&self) -> &[u8] {
+        self.0
+    }
+}
+
+impl<'a> Deref for Data<'a> {
+    type Target = [u8];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
         self.0
     }
 }
