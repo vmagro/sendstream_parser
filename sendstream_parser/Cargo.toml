@@ -1,0 +1,29 @@
+[package]
+description = "Parser for BTRFS sendstreams"
+edition = "2021"
+keywords = ["btrfs", "sendstream"]
+license = "MIT"
+name = "sendstream_parser"
+repository = "https://github.com/vmagro/sendstream_parser/"
+version = "0.2.2"
+
+[dependencies]
+derive_more = "0.99"
+hex = "0.4"
+nix = "0.26"
+nom = "7"
+serde = {version = "1", features = ["derive"], optional = true}
+thiserror = "1"
+uuid = "1"
+
+[features]
+default = ["serde"]
+serde = ["dep:serde", "uuid/serde"]
+
+[dev-dependencies]
+similar-asserts = "1.4"
+
+[badges]
+docs = {url = "https://img.shields.io/docsrs/sendstream_parser"}
+github = {repository = "vmagro/sendstream_parser"}
+maintenance = {status = "experimental"}
